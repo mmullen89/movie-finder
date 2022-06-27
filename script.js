@@ -6,6 +6,60 @@ function _possibleConstructorReturn(self, call) { if (!self) { throw new Referen
 
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
+var Movie = function Movie(props) {
+  var _props$movie = props.movie,
+      Title = _props$movie.Title,
+      Year = _props$movie.Year,
+      imdbID = _props$movie.imdbID,
+      Type = _props$movie.Type,
+      Poster = _props$movie.Poster; // ES6 destructuring
+
+  return React.createElement(
+    "div",
+    { className: "row" },
+    React.createElement(
+      "div",
+      { className: "col-4 col-md-3 mb-3" },
+      React.createElement(
+        "a",
+        { href: "https://www.imdb.com/title/" + imdbID + "/", target: "_blank" },
+        React.createElement("img", { src: Poster, className: "img-fluid" })
+      )
+    ),
+    React.createElement(
+      "div",
+      { className: "col-8 col-md-9 mb-3" },
+      React.createElement(
+        "a",
+        { href: "https://www.imdb.com/title/" + imdbID + "/", target: "_blank" },
+        React.createElement(
+          "h4",
+          null,
+          Title
+        ),
+        React.createElement(
+          "p",
+          null,
+          Type,
+          " | ",
+          Year
+        )
+      )
+    )
+  );
+};
+
+var checkStatus = function checkStatus(response) {
+  if (response.ok) {
+    // .ok returns true if response status is 200-299
+    return response;
+  }
+  throw new Error('Request was either a 404 or 500');
+};
+var json = function json(response) {
+  return response.json();
+};
+
 var MovieFinder = function (_React$Component) {
   _inherits(MovieFinder, _React$Component);
 
@@ -16,7 +70,8 @@ var MovieFinder = function (_React$Component) {
 
     _this.state = {
       searchTerm: '',
-      results: []
+      results: [],
+      error: ''
     };
     _this.handleChange = _this.handleChange.bind(_this);
     _this.handleSubmit = _this.handleSubmit.bind(_this);
@@ -24,69 +79,75 @@ var MovieFinder = function (_React$Component) {
   }
 
   _createClass(MovieFinder, [{
-    key: 'handleChange',
+    key: "handleChange",
     value: function handleChange(event) {
       this.setState({ searchTerm: event.target.value });
     }
   }, {
-    key: 'handleSubmit',
+    key: "handleSubmit",
     value: function handleSubmit(event) {
-      event.preventDefault();
-      var searchTerm = this.state.searchTerm; // ES6 destructuring
+      var _this2 = this;
 
-      searchTerm = searchTerm.trim(); // clean the string
+      event.preventDefault();
+      var searchTerm = this.state.searchTerm;
+
+      searchTerm = searchTerm.trim();
       if (!searchTerm) {
-        // make sure the value isn't an empty string
-        return; // early return
+        return;
       }
-      // make the AJAX request to OMDBAPI to get a list of results
-      fetch('https://www.omdbapi.com/?s=' + searchTerm + '&apikey=b7da8d63').then(function (response) {
-        if (response.ok) {
-          // .ok returns true if response status is 200-299
-          return response.json();
+      fetch("https://www.omdbapi.com/?s=" + searchTerm + "&apikey=b7da8d63").then(checkStatus).then(json).then(function (data) {
+        if (data.Response === 'False') {
+          throw new Error(data.Error);
         }
-        throw new Error('Request was either a 404 or 500');
-      }).then(function (data) {
-        console.log(data); // log the response data for now
+        if (data.Response === 'True' && data.Search) {
+          _this2.setState({ results: data.Search, error: '' });
+        }
       }).catch(function (error) {
+        _this2.setState({ error: error.message });
         console.log(error);
       });
     }
   }, {
-    key: 'render',
+    key: "render",
     value: function render() {
       var _state = this.state,
           searchTerm = _state.searchTerm,
-          results = _state.results; // ES6 destructuring
+          results = _state.results,
+          error = _state.error; // ES6 destructuring
 
       return React.createElement(
-        'div',
-        { className: 'container' },
+        "div",
+        { className: "container" },
         React.createElement(
-          'div',
-          { className: 'row' },
+          "div",
+          { className: "row" },
           React.createElement(
-            'div',
-            { className: 'col-12' },
+            "div",
+            { className: "col-12" },
             React.createElement(
-              'form',
-              { onSubmit: this.handleSubmit, className: 'form-inline my-4' },
-              React.createElement('input', {
-                type: 'text',
-                className: 'form-control mr-sm-2',
-                placeholder: 'frozen',
+              "form",
+              { onSubmit: this.handleSubmit, className: "form-inline my-4" },
+              React.createElement("input", {
+                type: "text",
+                className: "form-control mr-sm-2",
+                placeholder: "frozen",
                 value: searchTerm,
                 onChange: this.handleChange
               }),
               React.createElement(
-                'button',
-                { type: 'submit', className: 'btn btn-primary' },
-                'Submit'
+                "button",
+                { type: "submit", className: "btn btn-primary" },
+                "Submit"
               )
             ),
-            results.map(function (movie) {
-              return null; // returns nothing for now
-            })
+            function () {
+              if (error) {
+                return error;
+              }
+              return results.map(function (movie) {
+                return React.createElement(Movie, { key: movie.imdbID, movie: movie });
+              });
+            }()
           )
         )
       );
